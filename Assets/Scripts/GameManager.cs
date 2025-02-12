@@ -12,12 +12,14 @@ public class GameManager : MonoBehaviour
     public GameObject startToken;
     public GameObject endToken;
     public GameObject lookedToken;
-    private float lessHeuristic;
+    public GameObject visitedToken;
+    protected float lessHeuristic;
     //private int[,] GameMatrix; //0 not chosen, 1 player, 2 enemy de momento no hago nada con esto
     private Node[,] NodeMatrix;
     private int startPosx, startPosy;
     private int endPosx, endPosy;
     private Node actualNode;
+    private Node startNode;
     private Node endNode;
     void Awake()
     {
@@ -50,16 +52,25 @@ public class GameManager : MonoBehaviour
         NodeMatrix = new Node[Size, Size];
         CreateNodes();
 
-        actualNode = NodeMatrix[startPosx, startPosy];
-        Instantiate(startToken, NodeMatrix[startPosx, startPosy].RealPosition, Quaternion.identity);
-        Debug.Log($"Start node: {actualNode.PositionX}, {actualNode.PositionY}");
+        startNode = NodeMatrix[startPosx, startPosy];
+        Debug.Log($"Start node: {startNode.PositionX}, {startNode.PositionY}");
+        actualNode = startNode;
 
         endNode = NodeMatrix[endPosx, endPosy];
-        Instantiate(endToken, NodeMatrix[endPosx, endPosy].RealPosition, Quaternion.identity);
         Debug.Log($"End node: {endNode.PositionX}, {endNode.PositionY}");
 
-        actualNode = step(actualNode);
+        List<Node> nodesWay = new List<Node>();
+        Instantiate(startToken, NodeMatrix[startPosx, startPosy].RealPosition, Quaternion.identity);
+        Instantiate(endToken, NodeMatrix[endPosx, endPosy].RealPosition, Quaternion.identity);
 
+        while ( actualNode != endNode ) {
+            actualNode = step(actualNode);
+            nodesWay.Add(actualNode);
+        }
+
+        StartCoroutine(WayPainter(nodesWay, startNode, endNode));
+
+        
 
     }
     public void CreateNodes()
@@ -138,10 +149,11 @@ public class GameManager : MonoBehaviour
 
     public Node step(Node actualNode)
     {
+        lessHeuristic = 1000;
         Node nextNode = null;
-        float lessHeuristic = 1000;
         foreach (var node in actualNode.WayList)
         {
+
             Instantiate(lookedToken, NodeMatrix[node.NodeDestiny.PositionX, node.NodeDestiny.PositionY].RealPosition, Quaternion.identity);
             if (node.NodeDestiny.Heuristic < lessHeuristic)
             {
@@ -150,7 +162,25 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"Next node: {actualNode.PositionX}, {actualNode.PositionY}");
+        Debug.Log($"Next node: {nextNode.PositionX}, {nextNode.PositionY}");
         return nextNode;
     }
+
+    IEnumerator WayPainter(List<Node>way, Node start, Node finish)
+    {
+
+
+        Instantiate(startToken, NodeMatrix[startPosx, startPosy].RealPosition, Quaternion.identity);
+        Instantiate(endToken, NodeMatrix[endPosx, endPosy].RealPosition, Quaternion.identity);
+        foreach (Node node in way)
+        {
+            new WaitForSeconds(0.5f);
+            if (node.RealPosition != finish.RealPosition)
+            Instantiate(visitedToken, NodeMatrix[node.PositionX, node.PositionY].RealPosition, Quaternion.identity);
+        }
+
+        yield return null;
+
+    }
+
 }

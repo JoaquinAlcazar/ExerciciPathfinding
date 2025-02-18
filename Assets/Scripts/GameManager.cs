@@ -1,7 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
@@ -21,6 +23,8 @@ public class GameManager : MonoBehaviour
     private Node actualNode;
     private Node startNode;
     private Node endNode;
+    List<Node> nodesWay = new List<Node>();
+    private String nodeList = "Optimal way: ";
     void Awake()
     {
         Instance = this;
@@ -59,18 +63,13 @@ public class GameManager : MonoBehaviour
         endNode = NodeMatrix[endPosx, endPosy];
         Debug.Log($"End node: {endNode.PositionX}, {endNode.PositionY}");
 
-        List<Node> nodesWay = new List<Node>();
         Instantiate(startToken, NodeMatrix[startPosx, startPosy].RealPosition, Quaternion.identity);
         Instantiate(endToken, NodeMatrix[endPosx, endPosy].RealPosition, Quaternion.identity);
 
-        while ( actualNode != endNode ) {
-            actualNode = step(actualNode);
-            nodesWay.Add(actualNode);
-        }
+        StartCoroutine(searcher());
 
-        StartCoroutine(WayPainter(nodesWay, startNode, endNode));
+        StartCoroutine(WayPainterLoop(nodesWay, startNode, endNode));
 
-        
 
     }
     public void CreateNodes()
@@ -166,21 +165,48 @@ public class GameManager : MonoBehaviour
         return nextNode;
     }
 
+    IEnumerator WayPainterLoop(List<Node> way, Node start, Node finish)
+    {
+        while (way.Count > 0 && way[way.Count - 1] != finish) // Se repite mientras no haya llegado al final
+        {
+            yield return StartCoroutine(WayPainter(way, start, finish));
+            yield return new WaitForSeconds(1f);
+        }
+        foreach (var item in nodesWay)
+        {
+            nodeList += $"[{item.PositionX},{item.PositionY}], ";
+        }
+        Debug.Log(nodeList);
+        yield break;
+    }
     IEnumerator WayPainter(List<Node>way, Node start, Node finish)
     {
-
 
         Instantiate(startToken, NodeMatrix[startPosx, startPosy].RealPosition, Quaternion.identity);
         Instantiate(endToken, NodeMatrix[endPosx, endPosy].RealPosition, Quaternion.identity);
         foreach (Node node in way)
         {
-            new WaitForSeconds(0.5f);
             if (node.RealPosition != finish.RealPosition)
             Instantiate(visitedToken, NodeMatrix[node.PositionX, node.PositionY].RealPosition, Quaternion.identity);
         }
 
         yield return null;
-
     }
 
+    IEnumerator searcher()
+    {
+        while (true) // Se repetirá indefinidamente
+        {
+            actualNode = step(actualNode);
+            nodesWay.Add(actualNode);
+
+            if (actualNode == endNode)
+            { 
+                StartCoroutine(WayPainter(nodesWay, startNode, endNode));
+                yield break; // Detiene la corrutina cuando llega al nodo final
+            }
+
+            yield return new WaitForSeconds(1f);
+        }
+    }
 }
